@@ -26,4 +26,5 @@ class ProductRepository(context: Context) {
     suspend fun deleteAllProducts() {
         productDao.deleteAllProducts()
     }
+}
 
