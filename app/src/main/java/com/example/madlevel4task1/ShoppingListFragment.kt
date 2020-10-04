@@ -4,21 +4,19 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.DialogInterface
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import androidx.navigation.fragment.findNavController
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.fragment_shopping_list.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import androidx.recyclerview.widget.ItemTouchHelper
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -38,12 +36,15 @@ class ShoppingListFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_first, container, false)
+        return inflater.inflate(R.layout.fragment_shopping_list, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         productRepository = ProductRepository(requireContext())
+
+        getShoppingListFromDatabase()
 
         initRv()
 
@@ -54,6 +55,7 @@ class ShoppingListFragment : Fragment() {
         fabDeleteAll.setOnClickListener {
             removeAllProducts()
         }
+
     }
 
     private fun initRv() {
@@ -65,7 +67,6 @@ class ShoppingListFragment : Fragment() {
         rvShoppingList.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
 
         createItemTouchHelper().attachToRecyclerView(rvShoppingList)
-
     }
 
     @SuppressLint("InflateParams")
@@ -82,6 +83,7 @@ class ShoppingListFragment : Fragment() {
         }
         builder.show()
     }
+
     private fun addProduct(txtProductName: EditText, txtAmount: EditText) {
         if (validateFields(txtProductName, txtAmount)) {
             mainScope.launch {
@@ -99,15 +101,6 @@ class ShoppingListFragment : Fragment() {
         }
     }
 
-    private fun removeAllProducts() {
-        mainScope.launch {
-            withContext(Dispatchers.IO) {
-                productRepository.deleteAllProducts()
-            }
-            getShoppingListFromDatabase()
-        }
-    }
-
     private fun validateFields(txtProductName: EditText
                                , txtAmount: EditText
     ): Boolean {
@@ -122,6 +115,11 @@ class ShoppingListFragment : Fragment() {
     }
 
 
+    /**
+     * Create a touch helper to recognize when a user swipes an item from a recycler view.
+     * An ItemTouchHelper enables touch behavior (like swipe and move) on each ViewHolder,
+     * and uses callbacks to signal when a user is performing these actions.
+     */
     private fun createItemTouchHelper(): ItemTouchHelper {
 
         // Callback which is used to create the ItemTouch helper. Only enables left swipe.
@@ -154,6 +152,7 @@ class ShoppingListFragment : Fragment() {
         return ItemTouchHelper(callback)
     }
 
+
     private fun getShoppingListFromDatabase() {
         mainScope.launch {
             val shoppingList = withContext(Dispatchers.IO) {
@@ -164,5 +163,15 @@ class ShoppingListFragment : Fragment() {
             this@ShoppingListFragment.shoppingListAdapter.notifyDataSetChanged()
         }
     }
+
+    private fun removeAllProducts() {
+        mainScope.launch {
+            withContext(Dispatchers.IO) {
+                productRepository.deleteAllProducts()
+            }
+            getShoppingListFromDatabase()
+        }
+    }
+
 
 }
