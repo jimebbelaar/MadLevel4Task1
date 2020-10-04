@@ -1,11 +1,16 @@
 package com.example.madlevel4task1
 
+import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -41,6 +46,14 @@ class ShoppingListFragment : Fragment() {
         productRepository = ProductRepository(requireContext())
 
         initRv()
+
+        fabAddProduct.setOnClickListener {
+            showAddProductdialog()
+        }
+
+        fabDeleteAll.setOnClickListener {
+            removeAllProducts()
+        }
     }
 
     private fun initRv() {
@@ -54,6 +67,60 @@ class ShoppingListFragment : Fragment() {
         createItemTouchHelper().attachToRecyclerView(rvShoppingList)
 
     }
+
+    @SuppressLint("InflateParams")
+    private fun showAddProductdialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle(getString(R.string.add_product_dialog_title))
+        val dialogLayout = layoutInflater.inflate(R.layout.add_product_dialog, null)
+        val productName = dialogLayout.findViewById<EditText>(R.id.txt_product_name)
+        val amount = dialogLayout.findViewById<EditText>(R.id.txt_amount)
+
+        builder.setView(dialogLayout)
+        builder.setPositiveButton(R.string.dialog_ok_btn) { _: DialogInterface, _: Int ->
+            addProduct(productName, amount)
+        }
+        builder.show()
+    }
+    private fun addProduct(txtProductName: EditText, txtAmount: EditText) {
+        if (validateFields(txtProductName, txtAmount)) {
+            mainScope.launch {
+                val product = Product(
+                    productName = txtProductName.text.toString(),
+                    productQuantity = txtAmount.text.toString().toShort()
+                )
+
+                withContext(Dispatchers.IO) {
+                    productRepository.insertProduct(product)
+                }
+
+                getShoppingListFromDatabase()
+            }
+        }
+    }
+
+    private fun removeAllProducts() {
+        mainScope.launch {
+            withContext(Dispatchers.IO) {
+                productRepository.deleteAllProducts()
+            }
+            getShoppingListFromDatabase()
+        }
+    }
+
+    private fun validateFields(txtProductName: EditText
+                               , txtAmount: EditText
+    ): Boolean {
+        return if (txtProductName.text.toString().isNotBlank()
+            && txtAmount.text.toString().isNotBlank()
+        ) {
+            true
+        } else {
+            Toast.makeText(activity, "Please fill in the fields", Toast.LENGTH_LONG).show()
+            false
+        }
+    }
+
 
     private fun createItemTouchHelper(): ItemTouchHelper {
 
@@ -88,7 +155,14 @@ class ShoppingListFragment : Fragment() {
     }
 
     private fun getShoppingListFromDatabase() {
-
+        mainScope.launch {
+            val shoppingList = withContext(Dispatchers.IO) {
+                productRepository.getAllProducts()
+            }
+            this@ShoppingListFragment.products.clear()
+            this@ShoppingListFragment.products.addAll(shoppingList)
+            this@ShoppingListFragment.shoppingListAdapter.notifyDataSetChanged()
+        }
     }
 
 }
